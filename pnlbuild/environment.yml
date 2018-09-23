@@ -1,0 +1,11 @@
+name: pnlbuild
+
+dependencies:
+  - python=3.6
+  - future
+  - numpy
+  - cmake
+  - conda-build
+  - gcc_linux-64
+  - gxx_linux-64
+  - git
