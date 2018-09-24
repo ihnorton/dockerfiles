@@ -18,4 +18,7 @@ RUN conda env create -f environment.yml
 ENV PATH /opt/conda3/envs/pnlbuild/bin:$PATH
 
 ADD build.sh ./
+
+# Note: some ANTs templated files blow up the compiler, use lower
+# `-j` number to avoid weird interrupted errors from as and g++
 RUN ./build.sh

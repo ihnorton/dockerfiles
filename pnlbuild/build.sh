@@ -69,4 +69,6 @@ cmake ../BRAINSTools \
  -DUSE_SYSTEM_VTK=OFF \
  -DVTK_GIT_REPOSITORY=git://vtk.org/VTK.git
 
-make -j16
+# Use lower number in docker container to avoid errors due to
+# interrupted processes.
+make -j4
