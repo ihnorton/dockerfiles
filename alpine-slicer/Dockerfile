@@ -21,7 +21,22 @@ RUN apk add --no-cache \
     libxi-dev libsm-dev xcb-util-keysyms \
     xcb-util-image
 
+RUN apkt add --no-cache \
+    py-setuptools \
+    py-pydicom \
+    py-dicom \
+    python-pyparsing \
+    py-pyparsing \
+    py-parsing \
+    py-packaging \
+    py-nose \
+    py-wheel \
+    py-six
+
 RUN apk add --no-cache libxml2-dev # VTK's vendored version is missing patch
+
+# export PYTHON_LIBRARIES=/usr/lib/python2.7
+# export PYTHON_INCLUDE_DIRS=/usr/include/python2.7/
 
 RUN mkdir build && cd build && \
     cmake ../slicer \
@@ -31,6 +46,8 @@ RUN mkdir build && cd build && \
         -DBUILD_TESTING=0 \
         -DSlicer_BUILD_QT_DESIGNER_PLUGINS=0 \
         -DSlicer_USE_SimpleITK=0 \
-        -DVTKv9_EP_ARGS=\"-DVTK_USE_SYSTEM_LIBXML2\"
+        -DSlicer_BUILD_BRAINSTools=0 \
+        -DSlicer_USE_PYTHONQT_WITH_TCL=0 \
+        -DVTKv9_EP_ARGS=\"-DVTK_USE_SYSTEM_LIBXML2=1\"
 
 RUN cd build && make -j16
