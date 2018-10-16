@@ -1,83 +1,106 @@
-FROM debian:sid-slim
+FROM debian:sid-20181011-slim
 
 # prevent apt-get from prompting for keyboard choice
 #  https://superuser.com/questions/1356914/how-to-install-xserver-xorg-in-unattended-mode
 ENV DEBIAN_FRONTEND=noninteractive
-
-ENV VNCPORT=49053
-
-WORKDIR /slicer
-
-RUN apt-get update -qy \
-    && apt-get install -qy vim net-tools curl wget
-
-
-RUN curl -O -J -L "http://slicer.kitware.com/midas3/api/rest?method=midas.bitstream.download&name=Slicer-4.9.0-2018-10-14-linux-amd64.tar.gz&checksum=da328e50014d5562af1659d77a207567" && \
-    tar xf Slicer-4.9.0-2018-10-14-linux-amd64.tar.gz && \
-    rm Slicer-4.9.0-2018-10-14-linux-amd64.tar.gz
-
-RUN apt-get update -qy \
-    && apt-get install -qy vim               \
-                    net-tools                \
-                    wget                     \
-    && apt-get -qy install awesome           \
-    && apt-get -qy install libgl1-mesa-glx   \
-                    xserver-xorg-video-dummy \
-                    libxrender1              \
-                    libpulse0                \
-                    libpulse-mainloop-glib0  \
-                    libnss3                  \
-                    libxcomposite1           \
-                    libxcursor1              \
-                    libfontconfig1           \
-                    libxrandr2               \
-                    libasound2               \
-                    libglu1                  \
-                    x11vnc
-######
-# TODO move these to top
-RUN apt-get install -q -y netselect netselect-apt && \
-    netselect-apt testing
-# from https://blog.sleeplessbeastie.eu/2017/10/02/how-to-disable-the-apt-cache/
-RUN echo -e 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";' > sudo tee /etc/apt/apt.conf.d/00_disable-cache-files
-######
-
-# install jupyter
-RUN apt-get install -y -q python3 python3-pip && \
-    pip3 install jupyter
-
-######
-# TODO move these to top
-ENV DISPLAY=:10
 COPY cleaner_dpkg.txt /etc/dpkg/dpkg.cfg.d/01_nodoc
-RUN echo 'APT::Install-Recommends "0" ; APT::Install-Suggests "0" ;' > /etc/apt/apt.conf
-######
 
-COPY xorg.conf /slicer
-COPY run.sh /slicer
-COPY install.sh /slicer
 
-# Set up Jupyter
-# TODO get from extension manager pending
+################################################################################
+# - update apt, set up certs, run netselect to get fast mirror
+# - reduce apt gravity
+# - and disable caching
+#   from https://blog.sleeplessbeastie.eu/2017/10/02/how-to-disable-the-apt-cache/
+RUN echo 'APT::Install-Recommends "0" ; APT::Install-Suggests "0" ;' >> /etc/apt/apt.conf && \
+    echo 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";' | tee /etc/apt/apt.conf.d/00_disable-cache-files
+
+RUN apt-get update -q -y
+
+################################################################################
+# get packages
+# - update
+# - install things
+#   - basic  tools
+#   - slicer dependencies
+#   - awesome window manager
+RUN apt-get install -q -y \
+ vim net-tools curl \
+ libgl1-mesa-glx \
+ xserver-xorg-video-dummy \
+ libxrender1 \
+ libpulse0 \
+ libpulse-mainloop-glib0  \
+ libnss3  \
+ libxcomposite1 \
+ libxcursor1 \
+ libfontconfig1 \
+ libxrandr2 \
+ libasound2 \
+ libglu1 \
+ x11vnc \
+ awesome \
+ python3 python3-pip python3-setuptools
+
+################################################################################
+# install jupyter
+RUN pip3 install jupyter
+
+
+################################################################################
+# set up user
+ENV NB_USER sliceruser
+ENV NB_UID 1000
+ENV HOME /home/${NB_USER}
+
+RUN adduser --disabled-password \
+            --gecos "Default user" \
+            --uid ${NB_UID} \
+            ${NB_USER}
+
+WORKDIR ${HOME}
+
+
+################################################################################
+# get slicer
+# Download and unpack Slicer
+#RUN curl -O -J -L "http://slicer.kitware.com/midas3/api/rest?method=midas.bitstream.download&name=Slicer-4.9.0-2018-10-14-linux-amd64.tar.gz&checksum=da328e50014d5562af1659d77a207567" && \
+ADD --chown=sliceruser Slicer-4.9.0-2018-10-14-linux-amd64.tar.gz ${HOME}
+COPY --chown=sliceruser 634b0ef-linux-amd64-SlicerJupyter-git4772650-2018-10-03.tar.gz .
+
+################################################################################
+# these go after installs to avoid trivial invalidation
+ENV VNCPORT=49053
+ENV JUPYTERPORT=8888
+ENV DISPLAY=:10
+
+COPY xorg.conf .
+COPY run.sh .
+COPY install.sh .
+
+
+################################################################################
+# mybinder requirement
+RUN chown ${NB_USER} ${HOME}
+
+
+################################################################################
+# need to run Slicer as non-root because
+# - mybinder requirement
+# - chrome sandbox inside QtWebEngine does not support root.
+USER ${NB_USER}
+
+
+################################################################################
+# Set up SlicerJupyter
+# TODO: use buildbot version
+# for now build with ihnorton/dockerfiles/slicerjupyter-linux
+# and host pending
 #   https://github.com/Slicer/SlicerJupyter/issues/5
-COPY 634b0ef-linux-amd64-SlicerJupyter-git4772650-2018-10-03.tar.gz .
-RUN tar xf 634b0ef-linux-amd64-SlicerJupyter-git4772650-2018-10-03.tar.gz
 
-####################################
-# need to run Slicer as non-root because chrome sandbox (inside QtWebEngine)
-# does not support root. And docker discourages using sudo.
-RUN adduser --disabled-password --gecos "" sliceruser
-RUN chmod ugo+rwx /slicer
-WORKDIR /nb
-RUN chmod ugo+rwx /nb
+RUN ./install.sh
 
-# need HOME, it is not auto-set by docker
-ENV HOME=/home/sliceruser
-USER sliceruser
-## CONTAINER RUNNING AS sliceruser NOW
 
-# SlicerJupyter and kernel install
-RUN /slicer/install.sh
-
-EXPOSE $VNCPORT
-ENTRYPOINT /slicer/run.sh
+################################################################################
+EXPOSE $VNCPORT $JUPYTERPORT
+ENTRYPOINT ${HOME}/run.sh
+CMD []
