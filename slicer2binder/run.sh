@@ -15,3 +15,5 @@ sleep 1
 # start window manager
 # note: last command should not be backgrounded
 awesome &
+
+exec "$@"
