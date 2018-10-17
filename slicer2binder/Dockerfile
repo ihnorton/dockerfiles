@@ -103,4 +103,5 @@ RUN ./install.sh
 ################################################################################
 EXPOSE $VNCPORT $JUPYTERPORT
 ENTRYPOINT ${HOME}/run.sh
-CMD []
+
+CMD ["sh", "-c", "jupyter notebook --port=$JUPYTERPORT --ip=0.0.0.0 --no-browser"]
