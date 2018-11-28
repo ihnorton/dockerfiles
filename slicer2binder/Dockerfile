@@ -1,4 +1,4 @@
-FROM debian:sid-20181011-slim
+FROM debian:sid-20181112-slim
 
 # prevent apt-get from prompting for keyboard choice
 #  https://superuser.com/questions/1356914/how-to-install-xserver-xorg-in-unattended-mode
@@ -12,9 +12,9 @@ COPY cleaner_dpkg.txt /etc/dpkg/dpkg.cfg.d/01_nodoc
 # - and disable caching
 #   from https://blog.sleeplessbeastie.eu/2017/10/02/how-to-disable-the-apt-cache/
 RUN echo 'APT::Install-Recommends "0" ; APT::Install-Suggests "0" ;' >> /etc/apt/apt.conf && \
-    echo 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";' | tee /etc/apt/apt.conf.d/00_disable-cache-files
+    echo 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";' | tee /etc/apt/apt.conf.d/00_disable-cache-files && \
+    apt-get update -q -y
 
-RUN apt-get update -q -y
 
 ################################################################################
 # get packages
@@ -41,6 +41,7 @@ RUN apt-get install -q -y \
  awesome \
  python3 python3-pip python3-setuptools
 
+
 ################################################################################
 # install jupyter
 RUN pip3 install jupyter
@@ -61,11 +62,9 @@ WORKDIR ${HOME}
 
 
 ################################################################################
-# get slicer
 # Download and unpack Slicer
-#RUN curl -O -J -L "http://slicer.kitware.com/midas3/api/rest?method=midas.bitstream.download&name=Slicer-4.9.0-2018-10-14-linux-amd64.tar.gz&checksum=da328e50014d5562af1659d77a207567" && \
-ADD --chown=sliceruser Slicer-4.9.0-2018-10-14-linux-amd64.tar.gz ${HOME}
-COPY --chown=sliceruser 634b0ef-linux-amd64-SlicerJupyter-git4772650-2018-10-03.tar.gz .
+RUN curl -OJL "http://slicer.kitware.com/midas3/download?bitstream=887990" && \
+    tar xzf Slicer-4.10.0-linux-amd64.tar.gz
 
 ################################################################################
 # these go after installs to avoid trivial invalidation
@@ -80,7 +79,19 @@ COPY install.sh .
 
 ################################################################################
 # mybinder requirement
-RUN chown ${NB_USER} ${HOME}
+RUN chown ${NB_USER} ${HOME} ${HOME}/Slicer-*
+
+
+################################################################################
+# trying nbnovnc
+RUN apt-get -y -q install tightvncserver novnc websockify supervisor xinit \
+                          git sudo
+
+RUN pip3 install -e git+https://github.com/ryanlovett/nbnovnc git+https://github.com/jupyterhub/nbserverproxy
+
+RUN jupyter serverextension enable  --py nbnovnc && \
+    jupyter nbextension     install --py nbnovnc && \
+    jupyter nbextension     enable  --py nbnovnc
 
 
 ################################################################################
@@ -92,16 +103,11 @@ USER ${NB_USER}
 
 ################################################################################
 # Set up SlicerJupyter
-# TODO: use buildbot version
-# for now build with ihnorton/dockerfiles/slicerjupyter-linux
-# and host pending
-#   https://github.com/Slicer/SlicerJupyter/issues/5
-
 RUN ./install.sh
 
 
 ################################################################################
 EXPOSE $VNCPORT $JUPYTERPORT
-ENTRYPOINT ${HOME}/run.sh
+ENTRYPOINT ["/home/sliceruser/run.sh"]
 
 CMD ["sh", "-c", "jupyter notebook --port=$JUPYTERPORT --ip=0.0.0.0 --no-browser"]

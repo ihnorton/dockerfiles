@@ -1,3 +1,4 @@
 634b0ef-linux-amd64-SlicerJupyter-git4772650-2018-10-03.tar.gz filter=lfs diff=lfs merge=lfs -text
 Slicer-4.9.0-2018-10-14-linux-amd64.tar.gz filter=lfs diff=lfs merge=lfs -text
 *.tar.gz filter=lfs diff=lfs merge=lfs -text
+Slicer-4.10.0-linux-amd64.tar.gz filter=lfs diff=lfs merge=lfs -text
