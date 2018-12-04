@@ -1,15 +1,10 @@
 #!/usr/bin/env bash
 
-source /opt/conda3/etc/profile.d/conda.sh
-conda activate pnlbuild
+BUILD_DIR=${SRC_DIR}/build
+mkdir ${BUILD_DIR}
+cd ${BUILD_DIR}
 
-mkdir -p source
-
-git clone https://github.com/BRAINSia/BRAINSTools
-
-mkdir -p build && cd build
-
-cmake ../BRAINSTools \
+cmake \
  -DBRAINSTools_INSTALL_DEVELOPMENT=OFF \
  -DBRAINSTools_MAX_TEST_LEVEL=0 \
  -DBRAINSTools_SUPERBUILD=ON \
@@ -66,9 +61,11 @@ cmake ../BRAINSTools \
  -DUSE_SYSTEM_DCMTK=OFF \
  -DUSE_SYSTEM_ITK=OFF \
  -DUSE_SYSTEM_SlicerExecutionModel=OFF \
- -DUSE_SYSTEM_VTK=OFF \
- -DVTK_GIT_REPOSITORY=git://vtk.org/VTK.git
+ -DUSE_SYSTEM_VTK=ON \
+ "${SRC_DIR}"
 
-# Use lower number in docker container to avoid errors due to
-# interrupted processes.
-make -j4
+make -j $((${CPU_COUNT}+1))
+
+cmake \
+    -D CMAKE_INSTALL_PREFIX=$PREFIX \
+    -P ${BUILD_DIR}/cmake_install.cmake
