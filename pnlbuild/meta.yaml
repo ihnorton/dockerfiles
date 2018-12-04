@@ -1,0 +1,31 @@
+package:
+  name: brainstools 
+  version: "5.0"
+
+source:
+  git_rev: b27178f87
+  git_url: https://github.com/pnlbwh/BRAINSTools
+
+requirements:
+  build:
+    - vtk=8.1
+    - setuptools
+    - python=3.6
+    - future
+    - cmake
+    - conda-build
+    - gcc_linux-64
+    - gxx_linux-64
+    - icu
+    - git
+  run:
+    - python
+
+test:
+  imports:
+    - pyinstrument
+
+about:
+  home: https://github.com/BRAINSia/BRAINSTools
+  license: Apache 2.0
+  license_file: LICENSE
